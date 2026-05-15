@@ -10,8 +10,8 @@ int16_t gx, gy, gz;
 unsigned long lastTime = 0;
 float dt;
 
-float x, y, z;
-float vx, vy, vz;
+float x = 0, y = 0, z = 0;
+float vx = 0, vy = 0, vz = 0;
 
 // Dynamic offsets
 float ax_offset = 0;
@@ -135,19 +135,15 @@ void loop() {
   float new_ay = ay - ay_offset;
   float new_az = az - az_offset;
 
-  if (abs(new_ax) < 300) {
+  if (abs(new_ax) < 200) {
     new_ax = 0;
   }
-  if (abs(new_ay) < 300) {
+  if (abs(new_ay) < 200) {
     new_ay = 0;
   }
-  if (abs(new_az) < 300) {
+  if (abs(new_az) < 200) {
     new_az = 0;
   }
-  // Integrate
-  vx += new_ax * dt;
-  vy += new_ay * dt;
-  vz += new_az * dt;
 
   if (new_ax == 0) {
     vx = 0;
@@ -158,6 +154,10 @@ void loop() {
   if (new_az == 0) {
     vz = 0;
   }
+  // Integrate
+  vx += new_ax * dt;
+  vy += new_ay * dt;
+  vz += new_az * dt;
 
   x += vx * dt;
   y += vy * dt;
