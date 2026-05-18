@@ -1,53 +1,76 @@
 import socket
+import threading
 
 HOST = "0.0.0.0"
 PORT = 8080
 
-# Create socket
 server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+server.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
 server.bind((HOST, PORT))
-server.listen(1)
+server.listen()
 
-print("Listening on port 8080...")
+print("Server listening on port 8080...")
 
-# Accept one client
-conn, addr = server.accept()
-print("Connected from", addr)
+clients = []  # list of all connected clients
 
-buffer = ""
-values = []
 
-try:
-    while True:
-        data = conn.recv(1024).decode()
+# Handle each client connection
+def handle_client(conn, addr):
+    print("New connection:", addr)
+    buffer = ""
+    values = []
 
-        if not data:
-            print("Client disconnected")
-            break
+    try:
+        while True:
+            data = conn.recv(1024).decode()
 
-        buffer += data
+            if not data:
+                break
 
-        # Process complete lines
-        while "\n" in buffer:
-            line, buffer = buffer.split("\n", 1)
-            line = line.strip()
+            buffer += data
 
-            if line:
-                try:
-                    values.append(float(line))
+            while "\n" in buffer:
+                line, buffer = buffer.split("\n", 1)
+                line = line.strip()
 
-                    # Every 3 values = x, y, z
-                    if len(values) == 3:
-                        x, y, z = values
-                        print(f"Position -> x: {x:.2f}, y: {y:.2f}, z: {z:.2f}")
-                        values = []
+                if line:
+                    try:
+                        values.append(float(line))
 
-                except ValueError:
-                    print("Invalid data:", line)
+                        if len(values) == 3:
+                            x, y, z = values
+                            msg = f"Position -> x: {x:.2f}, y: {y:.2f}, z: {z:.2f}"
+                            print(msg)
 
-except Exception as e:
-    print("Error:", e)
+                            # send to ALL connected clients
+                            broadcast(msg + "\n")
 
-finally:
+                            values = []
+
+                    except ValueError:
+                        print("Bad data:", line)
+
+    except:
+        pass
+
+    print("Disconnected:", addr)
+    clients.remove(conn)
     conn.close()
-    server.close()
+
+
+# Send message to all clients
+def broadcast(message):
+    for c in clients:
+        try:
+            c.send(message.encode())
+        except:
+            pass
+
+
+# Accept multiple clients
+while True:
+    conn, addr = server.accept()
+    clients.append(conn)
+
+    thread = threading.Thread(target=handle_client, args=(conn, addr))
+    thread.start()
